@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistic Regression Explained</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 25px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            border-left: 5px solid #667eea;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+        
+        h2 {
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-weight: bold;
+            color: #4a5568;
+        }
+        
+        input[type="range"] {
+            width: 150px;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        
+        .equation {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            text-align: center;
+            margin: 15px 0;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .data-point {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin: 2px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .data-point:hover {
+            transform: scale(1.3);
+        }
+        
+        .class-0 { background-color: #ff6b6b; }
+        .class-1 { background-color: #4ecdc4; }
+        
+        .method-explanation {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .step {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .probability-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2d3748;
+            text-align: center;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Logistic Regression Explained</h1>
+        
+        <div class="section">
+            <h2>1. The Sigmoid Function</h2>
+            <p>Logistic regression uses the sigmoid function to map any real number to a probability between 0 and 1:</p>
+            <div class="equation">p = 1 / (1 + e^(-z)) where z = β₀ + β₁x</div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="beta0">Intercept (β₀):</label>
+                    <input type="range" id="beta0" min="-5" max="5" step="0.1" value="0">
+                    <span id="beta0-value">0</span>
+                </div>
+                <div class="control-group">
+                    <label for="beta1">Slope (β₁):</label>
+                    <input type="range" id="beta1" min="-3" max="3" step="0.1" value="1">
+                    <span id="beta1-value">1</span>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="sigmoidChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>2. Classification Boundary</h2>
+            <p>The decision boundary occurs at p = 0.5, which corresponds to z = 0. Points are classified as:</p>
+            <ul>
+                <li><span class="data-point class-1"></span> Class 1 (positive) when p ≥ 0.5</li>
+                <li><span class="data-point class-0"></span> Class 0 (negative) when p < 0.5</li>
+            </ul>
+            
+            <div class="chart-container">
+                <canvas id="classificationChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>3. Maximum Likelihood Estimation</h2>
+            <div class="method-explanation">
+                <h3>How Logistic Regression Finds the Best Parameters:</h3>
+                
+                <div class="step">
+                    <strong>Step 1: Likelihood Function</strong><br>
+                    For each data point, calculate the probability of observing that outcome given the current parameters.
+                </div>
+                
+                <div class="step">
+                    <strong>Step 2: Log-Likelihood</strong><br>
+                    Take the logarithm of the likelihood to make optimization easier:<br>
+                    <div class="equation">LL = Σ[y·log(p) + (1-y)·log(1-p)]</div>
+                </div>
+                
+                <div class="step">
+                    <strong>Step 3: Gradient Ascent</strong><br>
+                    Iteratively adjust parameters to maximize the log-likelihood using gradient ascent.
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>4. Interactive Prediction</h2>
+            <p>Enter an x-value to see the predicted probability:</p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="xValue">X Value:</label>
+                    <input type="range" id="xValue" min="-10" max="10" step="0.1" value="0">
+                    <span id="x-value">0</span>
+                </div>
+            </div>
+            
+            <div class="probability-display" id="probabilityDisplay">
+                Probability = 0.500
+            </div>
+            
+            <div class="equation" id="calculationSteps">
+                z = 0 + 1×0 = 0<br>
+                p = 1/(1 + e^(-0)) = 0.500
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>5. Key Advantages of Logistic Regression</h2>
+            <ul>
+                <li><strong>Probabilistic Output:</strong> Provides probability estimates, not just classifications</li>
+                <li><strong>No Feature Scaling Required:</strong> Works well with features on different scales</li>
+                <li><strong>Interpretable Coefficients:</strong> Each β represents the change in log-odds</li>
+                <li><strong>Fast Training:</strong> Converges quickly with gradient-based optimization</li>
+                <li><strong>Less Prone to Overfitting:</strong> Especially with regularization techniques</li>
+            </ul>
+        </div>
+        
+        <div class="section">
+            <h2>6. Mathematical Foundation</h2>
+            <div class="method-explanation">
+                <h3>Odds and Log-Odds:</h3>
+                <p><strong>Odds:</strong> ratio of probability of success to probability of failure</p>
+                <div class="equation">Odds = p/(1-p)</div>
+                
+                <p><strong>Log-Odds (Logit):</strong> natural logarithm of odds</p>
+                <div class="equation">logit(p) = ln(p/(1-p)) = β₀ + β₁x</div>
+                
+                <p>This linear relationship in log-odds space is what makes logistic regression "linear"!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize charts
+        let sigmoidChart, classificationChart;
+
+        function sigmoid(z) {
+            return 1 / (1 + Math.exp(-z));
+        }
+
+        function generateSigmoidData(beta0, beta1) {
+            const data = [];
+            for (let x = -10; x <= 10; x += 0.1) {
+                const z = beta0 + beta1 * x;
+                const p = sigmoid(z);
+                data.push({x: x, y: p});
+            }
+            return data;
+        }
+        
+        // Generate sample classification data
+        function generateClassificationData(beta0, beta1) {
+            const data = [];
+            const colors = [];
+            
+            // Generate some sample points
+            const xValues = [-8, -6, -4, -2, -1, 0, 1, 2, 4, 6, 8];
+            
+            xValues.forEach(x => {
+                const z = beta0 + beta1 * x;
+                const p = sigmoid(z);
+                const predicted = p >= 0.5 ? 1 : 0;
+                
+                data.push({x: x, y: predicted});
+                colors.push(predicted === 1 ? '#4ecdc4' : '#ff6b6b');
+            });
+            
+            return {data, colors};
+        }
+        function initSigmoidChart() {
+            const ctx = document.getElementById('sigmoidChart').getContext('2d');
+            sigmoidChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Sigmoid Function',
+                        data: generateSigmoidData(0, 1),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }, {
+                        label: 'Decision Boundary (p=0.5)',
+                        data: [{x: -10, y: 0.5}, {x: 10, y: 0.5}],
+                        borderColor: '#ff6b6b',
+                        borderDash: [5, 5],
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'z = β₀ + β₁x'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Probability'
+                            },
+                            min: 0,
+                            max: 1
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function initClassificationChart() {
+            const ctx = document.getElementById('classificationChart').getContext('2d');
+            const {data, colors} = generateClassificationData(0, 1);
+            
+            classificationChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Data Points',
+                        data: data,
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        pointRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Feature Value (x)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Class (0 or 1)'
+                            },
+                            min: -0.5,
+                            max: 1.5,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update charts when parameters change
+        function updateCharts() {
+            const beta0 = parseFloat(document.getElementById('beta0').value);
+            const beta1 = parseFloat(document.getElementById('beta1').value);
+            
+            // Update sigmoid chart
+            sigmoidChart.data.datasets[0].data = generateSigmoidData(beta0, beta1);
+            sigmoidChart.update();
+            
+            // Update classification chart
+            const {data, colors} = generateClassificationData(beta0, beta1);
+            classificationChart.data.datasets[0].data = data;
+            classificationChart.data.datasets[0].backgroundColor = colors;
+            classificationChart.data.datasets[0].borderColor = colors;
+            classificationChart.update();
+        }
+        
+        // Update probability display
+        function updateProbability() {
+            const beta0 = parseFloat(document.getElementById('beta0').value);
+            const beta1 = parseFloat(document.getElementById('beta1').value);
+            const x = parseFloat(document.getElementById('xValue').value);
+            
+            const z = beta0 + beta1 * x;
+            const p = sigmoid(z);
+            
+            document.getElementById('probabilityDisplay').textContent = 
+                `Probability = ${p.toFixed(3)}`;
+            
+            document.getElementById('calculationSteps').innerHTML = 
+                `z = ${beta0} + ${beta1}×${x} = ${z.toFixed(2)}<br>` +
+                `p = 1/(1 + e^(-${z.toFixed(2)})) = ${p.toFixed(3)}`;
+        }
+        
+        // Event listeners
+        document.getElementById('beta0').addEventListener('input', function() {
+            document.getElementById('beta0-value').textContent = this.value;
+            updateCharts();
+            updateProbability();
+        });
+        
+        document.getElementById('beta1').addEventListener('input', function() {
+            document.getElementById('beta1-value').textContent = this.value;
+            updateCharts();
+            updateProbability();
+        });
+        
+        document.getElementById('xValue').addEventListener('input', function() {
+            document.getElementById('x-value').textContent = this.value;
+            updateProbability();
+        });
+        
+        // Initialize everything when page loads
+        window.addEventListener('load', function() {
+            initSigmoidChart();
+            initClassificationChart();
+            updateProbability();
+        });
+    </script>
+</body>
+</html>
